@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+numpy
+pandas
+scikit-learn
+requests
+statsmodels    # optional; used for ARIMA if installed
+python-dateutil
