@@ -39,6 +39,15 @@ export function createForecastCsvUrl(data: ForecastResponse): string {
   return URL.createObjectURL(blob);
 }
 
+export function forecastToJson(data: ForecastResponse): string {
+  return JSON.stringify(data, null, 2);
+}
+
+export function createForecastJsonUrl(data: ForecastResponse): string {
+  const blob = new Blob([forecastToJson(data)], { type: "application/json;charset=utf-8" });
+  return URL.createObjectURL(blob);
+}
+
 export function revokeForecastExportUrl(url: string): void {
   URL.revokeObjectURL(url);
 }
