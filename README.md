@@ -1,4 +1,4 @@
-diploma-forecasting-app/
+# Main branch project structure
 │
 ├── frontend/                # React + Vite + Tailwind + Recharts
 │   ├── src/
