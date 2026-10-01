@@ -1,72 +1,109 @@
-# Main branch project structure
-│
-├── frontend/                # React + Vite + Tailwind + Recharts
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── ChartView.jsx
-│   │   │   ├── ModelSelector.jsx
-│   │   │   ├── StockInput.jsx
-│   │   │   └── ResultsTable.jsx
-│   │   ├── pages/
-│   │   │   └── HomePage.jsx
-│   │   ├── api/
-│   │   │   └── api.js           # axios запити до бекенду
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── index.html
-│   ├── package.json
-│   └── vite.config.js
-│
-├── backend/                 # FastAPI API сервер
-│   ├── app/
-│   │   ├── main.py           # Точка входу (FastAPI + Uvicorn)
-│   │   ├── routers/
-│   │   │   ├── stocks.py     # Маршрути для запитів акцій
-│   │   │   └── models.py     # Маршрути для вибору методів прогнозування
-│   │   ├── services/
-│   │   │   ├── data_loader.py    # завантаження даних через yfinance
-│   │   │   ├── forecast_client.py # запити до ML сервісу
-│   │   │   └── db_service.py      # робота з базою
-│   │   ├── db/
-│   │   │   └── database.py    # SQLAlchemy конфігурація
-│   │   └── schemas/
-│   │       └── models.py      # Pydantic схеми
-│   ├── requirements.txt
-│   └── Dockerfile
-│
-├── ml_service/              # окремий модуль для прогнозів
-│   ├── models/
-│   │   ├── arima_model.py
-│   │   ├── random_forest.py
-│   │   ├── lstm_model.py     # (опціонально)
-│   │   └── metrics.py        # RMSE, MAE тощо
-│   ├── main.py               # FastAPI endpoint для виклику моделей
-│   ├── requirements.txt
-│   └── Dockerfile
-│
-├── docker-compose.yml        # об’єднує frontend, backend, ml_service, PostgreSQL
-│
-├── .env                      # секрети, ключі, налаштування БД
-│
-└── README.md                 # опис проєкту для дипломної частини
+# Diploma Forecasting App
 
+Розподілений вебдодаток для прогнозування цін і напрямку руху фінансових інструментів з порівнянням моделей машинного навчання.
 
-Приклад взаємодії компонентів
+## Можливості
 
-Frontend (React)
-→ Надсилає запит до /api/forecast?symbol=AAPL&model=ARIMA
+- прогноз ціни (`regression`) і напрямку руху (`classification`);
+- підтримка акцій, індексів і криптоактивів;
+- моделі `ARIMA`, `Prophet`, `LSTM`, `Transformer`, `Ensemble` і baseline;
+- порівняння моделей через walk-forward validation;
+- історія прогнозів та експериментів;
+- fallback між Binance, Yahoo Finance і локальним кешем;
+- завантаження результату у форматах CSV та JSON.
 
-Backend (FastAPI)
-→ Отримує запит, через yfinance завантажує історичні дані,
-→ Відправляє їх у ml_service (через HTTP-запит).
+## Архітектура
 
-ML Service (FastAPI)
-→ Виконує прогноз за вказаною моделлю (ARIMA / Random Forest),
-→ Повертає прогнозовані дані та метрики.
+| Сервіс | Технології | Призначення | Порт |
+| --- | --- | --- | ---: |
+| Frontend | React, TypeScript, Vite, Tailwind, Recharts | Форми, графіки та експорт результатів | 5173 |
+| Backend | FastAPI, SQLAlchemy, SQLite | API, історія прогнозів та експериментів | 8000 |
+| ML service | FastAPI, PyTorch, pandas, Prophet | Дані, моделі, прогнозування та валідація | 8001 |
 
-Backend
-→ Зберігає результат у PostgreSQL,
-→ Відправляє результат назад на фронтенд.
+Потік запиту:
 
-Frontend
-→ Візуалізує графіки та таблиці порівнянь у Recharts.
+```text
+Frontend -> Backend API -> ML service -> Backend API -> Frontend
+```
+
+Backend зберігає результати у SQLite, а ML service використовує локальний OHLCV-кеш, якщо онлайн-джерело недоступне.
+
+## Структура репозиторію
+
+```text
+diploma-forecasting-app/
+├── frontend/
+│   └── src/
+│       ├── components/          # форми, графіки та історія
+│       ├── services/api.ts      # HTTP-запити до backend
+│       ├── utils/exportForecast.ts
+│       └── types.ts
+├── backend/
+│   └── app/
+│       ├── main.py              # FastAPI endpoints
+│       ├── database.py          # SQLAlchemy models and SQLite
+│       └── services/ml_client.py
+├── ml_service/
+│   ├── main.py                  # ML API
+│   ├── models/                  # ARIMA, LSTM, Transformer та інші моделі
+│   ├── services/                # завантаження даних і валідація
+│   └── cache/                   # локальний кеш OHLCV
+├── docker-compose.yml
+├── README.md
+└── .gitignore
+```
+
+## Запуск через Docker
+
+```bash
+docker compose up --build -d
+docker compose ps
+```
+
+Після запуску:
+
+- frontend: http://localhost:5173
+- backend documentation: http://localhost:8000/docs
+- ML service documentation: http://localhost:8001/docs
+
+Зупинка сервісів:
+
+```bash
+docker compose down
+```
+
+## Локальна перевірка frontend
+
+```bash
+cd frontend
+npm install
+npm run test
+npm run build
+```
+
+## Експорт прогнозів
+
+Формати експорту: CSV та JSON (підтримка завантаження в один клік).
+
+У CSV зберігаються символ, інтервал, тип значення, індекс, timestamp і значення прогнозу. JSON містить повну структуру відповіді `ForecastResponse`.
+
+## API endpoints
+
+- `POST /api/forecast` — один прогноз;
+- `POST /api/compare-models` — порівняння моделей;
+- `GET /api/forecasts/{symbol}` — історія прогнозів;
+- `GET /api/experiments` — історія експериментів;
+- `GET /api/health` — перевірка стану backend.
+
+## Git workflow
+
+Для нової функціональності використовується окрема feature-гілка:
+
+```bash
+git switch -c feature/my-feature
+git add .
+git commit -m "feat: describe the change"
+git push -u origin feature/my-feature
+```
+
+Після self-review зміни інтегруються через Pull Request у `main`.
